@@ -1,0 +1,65 @@
+name: Update GitOps Repo Chart Version
+
+on:
+  # Trigger this workflow when the 'Release Charts' workflow completes successfully
+  workflow_run:
+    workflows: ["Release Charts"]
+    types:
+      - completed
+
+env:
+  # Define gitops repo details
+  GITOPS_REPO: israelsz/argocd-gitops #  ArgoCD repo
+  GITOPS_BRANCH: main                 # Branch to update in ArgoCD repo
+  GITOPS_APP_PATH: dev-apps/astro-blog/application.yaml # Path to ArgoCD app file
+  CHART_PATH: charts/astro-blog-helm/Chart.yaml # Path to this repo's Chart.yaml
+
+jobs:
+  update-gitops:
+    # Only run if the triggering workflow was successful
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Helm Chart repo (Repo2)
+        uses: actions/checkout@v4
+        # the code is needed to read the Chart.yaml version
+
+      - name: Get Released Chart Version
+        id: get_chart_version
+        # Extract version directly from Chart.yaml
+        run: |
+          CHART_VERSION=$(grep '^version:' ${{ env.CHART_PATH }} | awk '{ print $2 }')
+          echo "version=${CHART_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Checkout GitOps repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.GITOPS_REPO }}
+          ref: ${{ env.GITOPS_BRANCH }}
+          token: ${{ secrets.GIT_OPS_PAT }} # Use the PAT
+          path: gitops-repo # Checkout GitOps repo into a sub-directory
+
+      - name: Update targetRevision in application.yaml
+        run: |
+          NEW_VERSION="${{ steps.get_chart_version.outputs.version }}"
+          # Use sed to replace the targetRevision line
+          sed -i -E "s|^(\s*targetRevision:\s*).*|\1${NEW_VERSION}|" gitops-repo/${{ env.GITOPS_APP_PATH }}
+          echo "Updated targetRevision to ${NEW_VERSION} in gitops-repo/${{ env.GITOPS_APP_PATH }}"
+
+      - name: Commit and push changes to GitOps repo
+        run: |
+          cd gitops-repo
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          # Check if there are changes to commit
+          if git diff --quiet HEAD -- ${{ env.GITOPS_APP_PATH }}; then
+            echo "No changes detected in application.yaml. Skipping commit."
+          else
+            git add ${{ env.GITOPS_APP_PATH }}
+            git commit -m "ci(astro-blog): Update chart targetRevision to ${{ steps.get_chart_version.outputs.version }}"
+            git push origin ${{ env.GITOPS_BRANCH }}
+            echo "Pushed updated application.yaml to GitOps repo."
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_OPS_PAT }}
