@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  astro-blog-helm:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2025-10-27T08:47:30.777308777Z"
+    description: A Helm chart for my Astro blog
+    digest: f80e97a9c9c33fc8aafe76590e0cfe0b59f9e0707d0141630b4664596d3d9a83
+    name: astro-blog-helm
+    type: application
+    urls:
+    - https://github.com/israelsz/astro-blog-helm/releases/download/astro-blog-helm-0.1.1/astro-blog-helm-0.1.1.tgz
+    version: 0.1.1
+generated: "2025-10-27T08:47:30.777315961Z"
