@@ -1,0 +1,13 @@
+# Default values for astro-blog-helm
+replicaCount: 1
+
+image:
+  repository: ghcr.io/israelsz/astro-blog
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress: {}

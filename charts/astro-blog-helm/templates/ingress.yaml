@@ -1,0 +1,44 @@
+{{- if .Values.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-astro-blog-ingress
+  annotations:
+    # 1. Tell k8s which ingress controller to use
+    kubernetes.io/ingress.class: {{ .Values.ingress.className | quote }}
+    
+    {{- if .Values.ingress.tls.enabled }}
+    # 2. Tell cert-manager which ClusterIssuer to use
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.certManager.clusterIssuer | quote }}
+    
+    # 3. Tell NGINX to force HTTPS redirect
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    {{- end }}
+spec:
+  {{- if .Values.ingress.tls.enabled }}
+  # 4. Define the TLS certificate
+  tls:
+    - hosts:
+      {{- range .Values.ingress.hosts }}
+      - {{ .host | quote }}
+      {{- end }}
+      # 5. Tell Ingress to use the secret cert-manager will create
+      secretName: {{ .Values.ingress.tls.secretName }}
+  {{- end }}
+  
+  rules:
+    {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ $.Release.Name }}-astro-blog-svc
+                port:
+                  name: http
+          {{- end }}
+    {{- end }}
+{{- end }}
