@@ -1,5 +1,5 @@
 # Default values for astro-blog-helm
-replicaCount: 2
+replicaCount: 1
 
 image:
   repository: ghcr.io/israelsz/astro-blog
