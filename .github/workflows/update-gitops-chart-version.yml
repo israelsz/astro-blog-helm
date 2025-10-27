@@ -40,15 +40,19 @@ jobs:
           token: ${{ secrets.GIT_OPS_PAT }} # Use the PAT
           path: gitops-repo # Checkout GitOps repo into a sub-directory
 
+      - name: Install yq
+        # Use a reliable action to install yq
+        uses: mikefarah/yq@v4.44.2 # Check for latest version if needed
+
+
       - name: Update targetRevision in application.yaml
         run: |
           NEW_VERSION="${{ steps.get_chart_version.outputs.version }}"
           APP_FILE_PATH="gitops-repo/${{ env.GITOPS_APP_PATH }}"
-          
-          # Use sed to find the line containing 'chart: astro-blog-helm'
-          # On the *next* line (N), substitute the targetRevision value.
-          sed -i "/chart: astro-blog-helm/N; s|^\(\s*targetRevision:\s*\).*|\1${NEW_VERSION}|" "$APP_FILE_PATH"
-          
+
+          # Select the 'sources' array, find the element where 'chart' is 'astro-blog-helm' and update its 'targetRevision' field.
+          yq eval ".spec.sources[] |= select(.chart == \"astro-blog-helm\") .targetRevision = \"$NEW_VERSION\"" -i "$APP_FILE_PATH"
+
           echo "Updated targetRevision to ${NEW_VERSION} in $APP_FILE_PATH"
 
       - name: Commit and push changes to GitOps repo
