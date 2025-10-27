@@ -43,9 +43,13 @@ jobs:
       - name: Update targetRevision in application.yaml
         run: |
           NEW_VERSION="${{ steps.get_chart_version.outputs.version }}"
-          # Use sed to replace the targetRevision line
-          sed -i -E "s|^(\s*targetRevision:\s*).*|\1${NEW_VERSION}|" gitops-repo/${{ env.GITOPS_APP_PATH }}
-          echo "Updated targetRevision to ${NEW_VERSION} in gitops-repo/${{ env.GITOPS_APP_PATH }}"
+          APP_FILE_PATH="gitops-repo/${{ env.GITOPS_APP_PATH }}"
+          
+          # Use sed to find the line containing 'chart: astro-blog-helm'
+          # On the *next* line (N), substitute the targetRevision value.
+          sed -i "/chart: astro-blog-helm/N; s|^\(\s*targetRevision:\s*\).*|\1${NEW_VERSION}|" "$APP_FILE_PATH"
+          
+          echo "Updated targetRevision to ${NEW_VERSION} in $APP_FILE_PATH"
 
       - name: Commit and push changes to GitOps repo
         run: |
